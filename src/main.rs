@@ -1,4 +1,5 @@
 use crate::days::day1::day_1;
+use crate::days::day2::day_2;
 use std::time;
 
 mod days;
@@ -13,4 +14,5 @@ fn main() {
     };
 
     run_day(&day_1);
+    run_day(&day_2);
 }
