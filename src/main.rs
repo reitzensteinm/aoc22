@@ -3,6 +3,7 @@ use crate::days::day2::day_2;
 use crate::days::day3::day_3;
 use crate::days::day4::day_4;
 use crate::days::day5::day_5;
+use crate::days::day6::day_6;
 use std::time;
 
 mod days;
@@ -19,4 +20,5 @@ fn main() {
     run_day(&day_3);
     run_day(&day_4);
     run_day(&day_5);
+    run_day(&day_6);
 }
