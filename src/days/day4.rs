@@ -16,8 +16,8 @@ impl Range {
     }
 
     pub fn overlaps(self, other: Range) -> bool {
-        let lower = (other.from < self.from && other.to < self.from);
-        let higher = (other.from > self.to && other.to > self.to);
+        let lower = other.from < self.from && other.to < self.from;
+        let higher = other.from > self.to && other.to > self.to;
 
         !(lower || higher)
     }
