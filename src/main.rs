@@ -1,5 +1,6 @@
 use crate::days::day1::day_1;
 use crate::days::day10::day_10;
+use crate::days::day11::day_11;
 use crate::days::day2::day_2;
 use crate::days::day3::day_3;
 use crate::days::day4::day_4;
@@ -8,19 +9,27 @@ use crate::days::day6::day_6;
 use crate::days::day7::day_7;
 use crate::days::day8::day_8;
 use crate::days::day9::day_9;
+
 use std::time;
 
 mod days;
 
 fn main() {
-    let iters = 100;
+    let iters = 10;
 
     for i in 0..iters {
         let start = time::Instant::now();
-        let run_day = |d: &dyn Fn() -> (String, String)| {
+        let mut last = start;
+        let mut run_day = |d: &dyn Fn() -> (String, String)| {
             if i == iters - 1 {
                 println!("{:?}", d());
-                println!("{}", (time::Instant::now() - start).as_micros());
+                let now = time::Instant::now();
+                println!(
+                    "{} ({})",
+                    (now - last).as_micros(),
+                    (now - start).as_micros()
+                );
+                last = now;
             } else {
                 d();
             }
@@ -36,5 +45,6 @@ fn main() {
         run_day(&day_8);
         run_day(&day_9);
         run_day(&day_10);
+        run_day(&day_11);
     }
 }
