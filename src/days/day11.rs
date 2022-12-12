@@ -34,7 +34,7 @@ impl Monkey {
                 };
 
                 if divisor != 1 {
-                    new_level = (new_level / divisor)
+                    new_level = new_level / divisor
                 }
 
                 if new_level > 1_000_000_000 {
