@@ -11,6 +11,7 @@ use crate::days::day8::day_8;
 use crate::days::day9::day_9;
 
 use crate::days::day12::day_12;
+use crate::days::day13::day_13;
 use std::time;
 
 mod days;
@@ -48,5 +49,6 @@ fn main() {
         run_day(&day_10);
         run_day(&day_11);
         run_day(&day_12);
+        run_day(&day_13);
     }
 }
