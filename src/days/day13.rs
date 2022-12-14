@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::fs::read_to_string;
-use std::io::Read;
 
 #[derive(Debug, PartialEq, Clone)]
 enum Packet {
@@ -36,10 +35,10 @@ fn packet_compare(a: &Packet, b: &Packet) -> Ordering {
             // Rust doesn't know the above can't terminate?
             todo!()
         }
-        (Packet::List(la), Packet::Number(n)) => {
+        (Packet::List(_), Packet::Number(n)) => {
             packet_compare(a, &Packet::List(vec![Packet::Number(*n)]))
         }
-        (Packet::Number(n), Packet::List(lb)) => {
+        (Packet::Number(n), Packet::List(_)) => {
             packet_compare(&Packet::List(vec![Packet::Number(*n)]), b)
         }
     }
@@ -122,7 +121,7 @@ pub fn day_13() -> (String, String) {
         let ordering = packet_compare(&packet_a, &packet_b);
 
         if ordering == Ordering::Less {
-            equal_sum += (i + 1)
+            equal_sum += i + 1
         }
 
         packets.push(packet_a);
@@ -143,7 +142,7 @@ pub fn day_13() -> (String, String) {
         if packet_compare(&packets[n], &divider_a) == Ordering::Equal
             || packet_compare(&packets[n], &divider_b) == Ordering::Equal
         {
-            divider_mult *= (n + 1);
+            divider_mult *= n + 1;
         }
     }
 
