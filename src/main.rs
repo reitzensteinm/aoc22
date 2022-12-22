@@ -1,3 +1,5 @@
+extern crate core;
+
 use crate::days::day1::day_1;
 use crate::days::day10::day_10;
 use crate::days::day11::day_11;
@@ -14,12 +16,15 @@ use crate::days::day12::day_12;
 use crate::days::day13::day_13;
 use crate::days::day14::day_14;
 use crate::days::day15::day_15;
+use crate::days::day16::day_16;
 use std::time;
 
 mod days;
 
 fn main() {
     let iters = 10;
+
+    //day_16();
 
     for i in 0..iters {
         let start = time::Instant::now();
@@ -54,5 +59,6 @@ fn main() {
         run_day(&day_13);
         run_day(&day_14);
         run_day(&day_15);
+        run_day(&day_16);
     }
 }
