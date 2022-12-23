@@ -1,6 +1,11 @@
 use crate::days::day1::day_1;
 use crate::days::day10::day_10;
 use crate::days::day11::day_11;
+use crate::days::day12::day_12;
+use crate::days::day13::day_13;
+use crate::days::day14::day_14;
+use crate::days::day15::day_15;
+use crate::days::day16::day_16;
 use crate::days::day2::day_2;
 use crate::days::day3::day_3;
 use crate::days::day4::day_4;
@@ -10,10 +15,6 @@ use crate::days::day7::day_7;
 use crate::days::day8::day_8;
 use crate::days::day9::day_9;
 
-use crate::days::day12::day_12;
-use crate::days::day13::day_13;
-use crate::days::day14::day_14;
-use crate::days::day15::day_15;
 use std::time;
 
 mod days;
@@ -54,5 +55,6 @@ fn main() {
         run_day(&day_13);
         run_day(&day_14);
         run_day(&day_15);
+        run_day(&day_16);
     }
 }
