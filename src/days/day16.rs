@@ -74,6 +74,7 @@ struct SearchState {
     b: Entity,
     enabled: u64,
     volume: u32,
+    flow: u32,
     step: u8,
     reward: usize,
 }
@@ -89,8 +90,14 @@ impl PartialOrd for SearchState {
 }
 
 impl SearchState {
+    fn open_valve(&mut self, search: &Search, v: u8) {
+        debug_assert_eq!((self.enabled >> v) & 1, 0);
+        self.enabled |= (1 << v);
+        self.flow += search.system.valves[v as usize].flow as u32;
+    }
+
     fn calculate_reward(&mut self, search: &Search) {
-        let mut reward = self.total_flow(search) as usize;
+        let mut reward = self.flow as usize;
         if let Some((score, dist)) = self.a.dest {
             reward += score as usize / dist as usize;
         }
@@ -101,35 +108,24 @@ impl SearchState {
         self.reward = reward;
     }
 
-    fn total_flow(&self, search: &Search) -> u32 {
-        let mut out = 0;
-        for x in &search.system.flow_priority {
-            if (self.enabled >> *x) & 1 == 1 {
-                let valve = &search.system.valves[*x];
-                out += valve.flow;
-            }
-        }
-        out as u32
-    }
-
     fn accelerate(&mut self, search: &Search) {
         while let (Some((dest_a, prog_a)), Some((dest_b, prog_b))) = (self.a.dest, self.b.dest) {
             if self.step >= 26 {
                 return;
             }
-            self.volume += self.total_flow(search);
+            self.volume += self.flow;
             self.step += 1;
             if prog_a > 1 {
                 self.a.dest = Some((dest_a, prog_a - 1));
             } else {
-                self.enabled |= 1 << dest_a;
+                self.open_valve(search, dest_a);
                 self.a.pos = dest_a;
                 self.a.dest = None;
             }
             if prog_b > 1 {
                 self.b.dest = Some((dest_b, prog_b - 1));
             } else {
-                self.enabled |= 1 << dest_b;
+                self.open_valve(search, dest_b);
                 self.b.pos = dest_b;
                 self.b.dest = None;
             }
@@ -175,15 +171,19 @@ impl SearchState {
         };
 
         let mut out = vec![];
-        let flow = self.total_flow(search);
+        let flow = self.flow;
         for my_choice in build_choices(&self.a, &self.b) {
             for ele_choice in build_choices(&self.b, &self.a) {
-                if self.a.pos == self.b.pos {
-                    if let Choice::Open(ta, _) = my_choice {
-                        if let Choice::Open(tb, _) = ele_choice {
+                if let Choice::Open(ta, _) = my_choice {
+                    if let Choice::Open(tb, _) = ele_choice {
+                        if self.a.pos == self.b.pos {
                             if tb <= ta {
                                 continue;
                             }
+                        }
+
+                        if ta == tb {
+                            continue;
                         }
                     }
                 }
@@ -204,7 +204,7 @@ impl SearchState {
                         if prog > 1 {
                             base.a.dest = Some((dest, prog - 1));
                         } else {
-                            base.enabled |= 1 << dest;
+                            base.open_valve(search, dest);
                             base.a.pos = dest;
                             base.a.dest = None;
                         }
@@ -222,7 +222,7 @@ impl SearchState {
                         if prog > 1 {
                             base.b.dest = Some((dest, prog - 1));
                         } else {
-                            base.enabled |= 1 << dest;
+                            base.open_valve(search, dest);
                             base.b.pos = dest;
                             base.b.dest = None;
                         }
@@ -246,6 +246,7 @@ struct Search {
 
 impl SearchState {
     fn best_possible_outcome(&self, search: &Search) -> usize {
+        //println!("***");
         let steps = (26 - self.step) as usize;
 
         let mut clone = self.clone();
@@ -297,15 +298,19 @@ impl SearchState {
 
         let generic_assign = |clone: &mut SearchState| {
             for p in &search.system.flow_priority {
+                if *p == a_specific.unwrap_or(0) as usize || *p == b_specific.unwrap_or(0) as usize
+                {
+                    continue;
+                }
                 if (clone.enabled >> p) & 1 == 0 {
-                    clone.enabled |= 1 << p;
+                    clone.open_valve(search, *p as u8);
                     break;
                 }
             }
         };
 
         for c in 0..steps {
-            out += clone.total_flow(search) as usize;
+            out += clone.flow as usize;
 
             let a_trigger = c == a_first || ((c >= a_next) && ((c - a_next) % 3 == 0));
             let b_trigger = c == b_first || ((c >= b_next) && ((c - b_next) % 3 == 0));
@@ -313,7 +318,7 @@ impl SearchState {
             if a_trigger {
                 if let Some(v) = a_specific {
                     if c == a_first {
-                        clone.enabled |= 1 << v;
+                        clone.open_valve(search, v);
                     } else {
                         generic_assign(&mut clone);
                     }
@@ -325,7 +330,7 @@ impl SearchState {
             if b_trigger {
                 if let Some(v) = b_specific {
                     if c == b_first {
-                        clone.enabled |= 1 << v;
+                        clone.open_valve(search, v);
                     } else {
                         generic_assign(&mut clone);
                     }
@@ -440,6 +445,7 @@ pub fn day_16() -> (String, String) {
                 pos: get_mapping("AA") as u8,
                 dest: None,
             },
+            flow: 0,
             reward: 0,
             enabled: 0,
             volume: 0,
