@@ -1,12 +1,10 @@
 use itertools::Itertools;
 use regex::Regex;
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::fs::read_to_string;
-use std::time;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Valve {
     num: usize,
     flow: usize,
@@ -14,12 +12,14 @@ struct Valve {
     times: Vec<usize>,
 }
 
+#[derive(Clone)]
 struct System {
     valves: Vec<Valve>,
     flow_priority: Vec<usize>,
 }
 
 impl System {
+    // Precached pathfind of the shortest path from any valve to any other valve
     fn pathfind(&mut self) {
         for i in 0..self.valves.len() {
             let mut times: Vec<Option<usize>> = vec![None; self.valves.len()];
@@ -44,6 +44,7 @@ impl System {
         }
     }
 
+    // List of the valves that have flow, sorted from high flow to low
     fn priority(&mut self) {
         let priorities: Vec<usize> = self
             .valves
@@ -68,10 +69,20 @@ struct Entity {
     dest: Option<(u8, u8)>,
 }
 
+impl Entity {
+    fn partial_reward(&self) -> usize {
+        if let Some((score, dist)) = self.dest {
+            score as usize / dist as usize
+        } else {
+            0
+        }
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord)]
 struct SearchState {
-    a: Entity,
-    b: Entity,
+    player: Entity,
+    elephant: Entity,
     enabled: u64,
     volume: u32,
     flow: u32,
@@ -79,6 +90,12 @@ struct SearchState {
     reward: usize,
 }
 
+// We search depth first, but sort candidates of equal day to find the most promising
+// The most fruitful elimination of nodes in the tree appears to by culling intermediate states
+// based on their best possible outcome compared to the known best solution.
+// Intermediate states contain a lot of data - 2x positions, valves and current volume. This puts
+// dynamic programming off the table, and makes comparing intermediate states with each other
+// for culling difficult considering we only end up visiting about 400k of them.
 impl PartialOrd for SearchState {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(
@@ -92,63 +109,41 @@ impl PartialOrd for SearchState {
 impl SearchState {
     fn open_valve(&mut self, search: &Search, v: u8) {
         debug_assert_eq!((self.enabled >> v) & 1, 0);
-        self.enabled |= (1 << v);
+        self.enabled |= 1 << v;
         self.flow += search.system.valves[v as usize].flow as u32;
     }
 
-    fn calculate_reward(&mut self, search: &Search) {
+    // This is an indication of how promising a search state is
+    fn calculate_reward(&mut self) {
         let mut reward = self.flow as usize;
-        if let Some((score, dist)) = self.a.dest {
-            reward += score as usize / dist as usize;
-        }
 
-        if let Some((score, dist)) = self.b.dest {
-            reward += score as usize / dist as usize;
-        }
+        reward += self.player.partial_reward();
+        reward += self.elephant.partial_reward();
+
         self.reward = reward;
     }
 
-    fn accelerate(&mut self, search: &Search) {
-        while let (Some((dest_a, prog_a)), Some((dest_b, prog_b))) = (self.a.dest, self.b.dest) {
-            if self.step >= 26 {
-                return;
-            }
-            self.volume += self.flow;
-            self.step += 1;
-            if prog_a > 1 {
-                self.a.dest = Some((dest_a, prog_a - 1));
-            } else {
-                self.open_valve(search, dest_a);
-                self.a.pos = dest_a;
-                self.a.dest = None;
-            }
-            if prog_b > 1 {
-                self.b.dest = Some((dest_b, prog_b - 1));
-            } else {
-                self.open_valve(search, dest_b);
-                self.b.pos = dest_b;
-                self.b.dest = None;
-            }
-        }
-    }
-
-    fn choices(&self, search: &Search) -> Vec<SearchState> {
+    // Builds possible next states from the current state, culling where it can
+    fn next_states(&self, search: &Search) -> Vec<SearchState> {
         enum Choice {
             Continue,
             Idle,
             Open(u8, u8),
         }
 
-        if self.step >= 26 {
+        if self.step >= search.steps as u8 {
             return vec![];
         }
 
+        // Plans out the next move for each entity
         let build_choices = |e: &Entity, other: &Entity| {
+            // If pathfinding is underway, continue
             if e.dest.is_some() {
                 return vec![Choice::Continue];
             } else {
                 let mut out = vec![];
                 for v in &search.system.flow_priority {
+                    // Check valves that aren't enabled, that aren't the target of the other entity
                     if (self.enabled >> v) & 1 == 0 {
                         let delay = search.system.valves[e.pos as usize].times[*v] as u8;
 
@@ -157,12 +152,16 @@ impl SearchState {
                                 continue;
                             }
                         }
-                        if self.step + delay + 2 > 26 {
+
+                        // If we won't get there and turn it on and leave it on for a turn,
+                        // it can't help
+                        if self.step + delay + 2 > search.steps as u8 {
                         } else {
                             out.push(Choice::Open(*v as u8, delay));
                         }
                     }
                 }
+                // When an entity has nothing to do, swap to idle mode
                 if out.len() == 0 {
                     out.push(Choice::Idle);
                 }
@@ -170,19 +169,30 @@ impl SearchState {
             }
         };
 
+        let my_choices = build_choices(&self.player, &self.elephant);
+        // To support Part A
+        let elephant_choices = if search.elephant {
+            build_choices(&self.elephant, &self.player)
+        } else {
+            vec![Choice::Idle]
+        };
+
         let mut out = vec![];
-        let flow = self.flow;
-        for my_choice in build_choices(&self.a, &self.b) {
-            for ele_choice in build_choices(&self.b, &self.a) {
+
+        for my_choice in &my_choices {
+            for ele_choice in &elephant_choices {
                 if let Choice::Open(ta, _) = my_choice {
                     if let Choice::Open(tb, _) = ele_choice {
-                        if self.a.pos == self.b.pos {
-                            if tb <= ta {
+                        if self.player.pos == self.elephant.pos {
+                            // This prevents mirrored opening moves, since the two entities
+                            // are identical.
+                            if *tb <= *ta {
                                 continue;
                             }
                         }
 
-                        if ta == tb {
+                        // Both entities shouldn't move to the same square.
+                        if *ta == *tb {
                             continue;
                         }
                     }
@@ -190,46 +200,41 @@ impl SearchState {
 
                 let mut base = self.clone();
 
-                base.volume += flow;
+                base.volume += base.flow;
                 base.step += 1;
 
-                match my_choice {
+                // Entities can either be moving towards and unlocking a goal, idling,
+                // or locking on to a new goal
+                let apply_choice = |choice: &Choice, entity: &mut Entity| match *choice {
                     Choice::Open(dest, len) => {
-                        base.a.dest = Some((dest, len));
+                        entity.dest = Some((dest, len));
+                        None
                     }
-                    Choice::Idle => {}
+                    Choice::Idle => None,
                     Choice::Continue => {
-                        let (dest, prog) = base.a.dest.unwrap();
-
+                        let (dest, prog) = entity.dest.unwrap();
                         if prog > 1 {
-                            base.a.dest = Some((dest, prog - 1));
+                            entity.dest = Some((dest, prog - 1));
+                            None
                         } else {
-                            base.open_valve(search, dest);
-                            base.a.pos = dest;
-                            base.a.dest = None;
+                            entity.pos = dest;
+                            entity.dest = None;
+                            Some(dest)
                         }
                     }
+                };
+
+                // Duplicated due to aliasing rules
+                if let Some(v) = apply_choice(my_choice, &mut base.player) {
+                    base.open_valve(search, v);
                 }
 
-                match ele_choice {
-                    Choice::Open(dest, len) => {
-                        base.b.dest = Some((dest, len));
-                    }
-                    Choice::Idle => {}
-                    Choice::Continue => {
-                        let (dest, prog) = base.b.dest.unwrap();
-
-                        if prog > 1 {
-                            base.b.dest = Some((dest, prog - 1));
-                        } else {
-                            base.open_valve(search, dest);
-                            base.b.pos = dest;
-                            base.b.dest = None;
-                        }
-                    }
+                if let Some(v) = apply_choice(ele_choice, &mut base.elephant) {
+                    base.open_valve(search, v);
                 }
 
-                base.calculate_reward(search);
+                // Caches the expected value of this state
+                base.calculate_reward();
 
                 out.push(base);
             }
@@ -240,61 +245,63 @@ impl SearchState {
 }
 
 struct Search {
+    steps: usize,
+    elephant: bool,
+
+    checked: usize,
+    skipped: usize,
     system: System,
+    best: Option<SearchState>,
     initial: SearchState,
 }
 
 impl SearchState {
+    // This is where most of the magic happens. It extrapolates forward from the current state,
+    // working out what the best possible volume it could yield. This allows for aggressive culling.
+    // It's long and convoluted, because it:
+    // * Finishes the current move of each entity
+    // * Finds the fastest possible move it could make from dest to another valve
+    // * From there, conservatively unlocks the best valves every three turns
+    // While complex, it cuts the visited states from tens of millions to just 400k for part 2,
+    // compared to a more naive solution, more than paying for its weight.
     fn best_possible_outcome(&self, search: &Search) -> usize {
-        //println!("***");
-        let steps = (26 - self.step) as usize;
+        let steps = search.steps - self.step as usize;
 
         let mut clone = self.clone();
         let mut out = self.volume as usize;
 
-        let a_first = self.a.dest.map(|i| i.1 - 1).unwrap_or(0) as usize;
-        let b_first = self.b.dest.map(|i| i.1 - 1).unwrap_or(0) as usize;
+        let plan = |entity: &Entity| {
+            let first = entity.dest.map(|i| i.1 - 1).unwrap_or(0) as usize;
+            let specific: Option<u8> = entity.dest.map(|i| i.0);
 
-        let a_specific: Option<u8> = self.a.dest.map(|i| i.0);
-        let b_specific: Option<u8> = self.b.dest.map(|i| i.0);
-
-        let a_next = if let Some(ap) = a_specific {
-            let mut lowest = None;
-            for p in &search.system.flow_priority {
-                if (clone.enabled >> p) & 1 == 0 && (*p != ap as usize) {
-                    let time = search.system.valves[ap as usize].times[*p];
-                    if let Some(v) = lowest {
-                        if time < v {
+            let next = if let Some(sp) = specific {
+                let mut lowest = None;
+                for p in &search.system.flow_priority {
+                    if (clone.enabled >> p) & 1 == 0 && (*p != sp as usize) {
+                        let time = search.system.valves[sp as usize].times[*p];
+                        if let Some(v) = lowest {
+                            if time < v {
+                                lowest = Some(time);
+                            }
+                        } else {
                             lowest = Some(time);
                         }
-                    } else {
-                        lowest = Some(time);
                     }
                 }
-            }
-            a_first + lowest.unwrap_or(1) + 1
-        } else {
-            a_first + 3
+                first + lowest.unwrap_or(1) + 1
+            } else {
+                first + 3
+            };
+
+            // Yields an optimistic plan with:
+            // * the turn on which the next valve will be unlocked
+            // * the specific valve that turn unlocks (if any)
+            // * the turn on which the valve after that will be unlocked
+            (first, specific, next)
         };
 
-        let b_next = if let Some(ap) = b_specific {
-            let mut lowest = None;
-            for p in &search.system.flow_priority {
-                if (clone.enabled >> p) & 1 == 0 && (*p != ap as usize) {
-                    let time = search.system.valves[ap as usize].times[*p];
-                    if let Some(v) = lowest {
-                        if time < v {
-                            lowest = Some(time);
-                        }
-                    } else {
-                        lowest = Some(time);
-                    }
-                }
-            }
-            b_first + lowest.unwrap_or(1) + 1
-        } else {
-            b_first + 3
-        };
+        let (a_first, a_specific, a_next) = plan(&self.player);
+        let (b_first, b_specific, b_next) = plan(&self.elephant);
 
         let generic_assign = |clone: &mut SearchState| {
             for p in &search.system.flow_priority {
@@ -312,6 +319,8 @@ impl SearchState {
         for c in 0..steps {
             out += clone.flow as usize;
 
+            // Ugly, but refactoring these into a fn instead of duplicating slows the program
+            // down by 25%. Suspect nested fns not inlined. I'm not going to break out Godbolt for AoC...
             let a_trigger = c == a_first || ((c >= a_next) && ((c - a_next) % 3 == 0));
             let b_trigger = c == b_first || ((c >= b_next) && ((c - b_next) % 3 == 0));
 
@@ -327,7 +336,7 @@ impl SearchState {
                 }
             }
 
-            if b_trigger {
+            if b_trigger && search.elephant {
                 if let Some(v) = b_specific {
                     if c == b_first {
                         clone.open_valve(search, v);
@@ -345,51 +354,68 @@ impl SearchState {
 }
 
 impl Search {
-    fn search(&mut self) -> u32 {
-        let mut heap = BinaryHeap::new();
-        heap.push(self.initial);
+    fn new(system: System, steps: usize, elephant: bool, start: u8) -> Search {
+        Search {
+            steps,
+            elephant,
+            checked: 0,
+            skipped: 0,
+            system,
+            best: None,
+            initial: SearchState {
+                player: Entity {
+                    pos: start,
+                    dest: None,
+                },
+                elephant: Entity {
+                    pos: start,
+                    dest: None,
+                },
+                flow: 0,
+                reward: 0,
+                enabled: 0,
+                volume: 0,
+                step: 0,
+            },
+        }
+    }
 
-        let mut best: Option<SearchState> = None;
-        let mut c = 0_usize;
-        let mut skipped = 0_usize;
+    // Searches recursively through states, sorting by expected value at each node
+    // I found that, when using a priority queue, the best way to tune it was a depth
+    // first search anyway. This replicates the logic with lower allocation since more
+    // lives on the stack.
+    fn search_inner(&mut self, state: SearchState) {
+        let choices = state.next_states(self);
+        self.checked += 1;
 
-        while let Some(mut ss) = heap.pop() {
-            c += 1;
-            if let Some(b) = best {
-                let best_outcome = ss.best_possible_outcome(self);
-                if b.volume >= best_outcome as u32 {
-                    skipped += 1;
+        for child in choices.into_iter().sorted().rev() {
+            if let Some(best) = self.best {
+                let best_outcome = child.best_possible_outcome(self);
+                if best.volume >= best_outcome as u32 {
+                    self.skipped += 1;
                     continue;
                 }
-            }
 
-            ss.accelerate(&self);
-
-            if ss.step == 26 {
-                if let Some(s) = best {
-                    if s.volume < ss.volume {
-                        best = Some(ss);
-                    }
-                } else {
-                    best = Some(ss);
+                if best.volume < child.volume {
+                    self.best = Some(child);
                 }
             } else {
-                for c in ss.choices(self) {
-                    heap.push(c);
-                }
+                self.best = Some(child);
             }
+
+            self.search_inner(child);
         }
+    }
 
-        println!("{}", c);
-        // println!("{:?}", best);
-        // println!("{:#018b}", best.unwrap().enabled);
+    fn search(&mut self) -> u32 {
+        let initial = self.initial;
 
-        best.unwrap().volume
+        self.search_inner(initial);
+        self.best.unwrap().volume
     }
 }
 
 pub fn day_16() -> (String, String) {
-    let start = time::Instant::now();
     let f = read_to_string("input/day16.txt").unwrap();
 
     let re =
@@ -434,24 +460,10 @@ pub fn day_16() -> (String, String) {
     };
     s.precalc();
 
-    let mut search = Search {
-        system: s,
-        initial: SearchState {
-            a: Entity {
-                pos: get_mapping("AA") as u8,
-                dest: None,
-            },
-            b: Entity {
-                pos: get_mapping("AA") as u8,
-                dest: None,
-            },
-            flow: 0,
-            reward: 0,
-            enabled: 0,
-            volume: 0,
-            step: 0,
-        },
-    };
+    let start = get_mapping("AA") as u8;
 
-    (format!("{}", search.search()), "".to_string())
+    let a = Search::new(s.clone(), 30, false, start).search();
+    let b = Search::new(s, 26, true, start).search();
+
+    (format!("{a}"), format!("{b}"))
 }
