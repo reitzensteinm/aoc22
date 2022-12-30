@@ -10,6 +10,7 @@ use crate::days::day17::day_17;
 use crate::days::day18::day_18;
 use crate::days::day19::day_19;
 use crate::days::day2::day_2;
+use crate::days::day20::day_20;
 use crate::days::day3::day_3;
 use crate::days::day4::day_4;
 use crate::days::day5::day_5;
@@ -62,5 +63,6 @@ fn main() {
         run_day(&day_17);
         run_day(&day_18);
         run_day(&day_19);
+        run_day(&day_20);
     }
 }
