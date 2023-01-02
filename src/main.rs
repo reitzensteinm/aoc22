@@ -15,6 +15,7 @@ use crate::days::day21::day_21;
 use crate::days::day22::day_22;
 use crate::days::day23::day_23;
 use crate::days::day24::day_24;
+use crate::days::day25::day_25;
 use crate::days::day3::day_3;
 use crate::days::day4::day_4;
 use crate::days::day5::day_5;
@@ -72,5 +73,6 @@ fn main() {
         run_day(&day_22);
         run_day(&day_23);
         run_day(&day_24);
+        run_day(&day_25);
     }
 }
