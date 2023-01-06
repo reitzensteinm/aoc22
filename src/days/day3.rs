@@ -31,7 +31,7 @@ fn common_element(hashes: Vec<HashSet<u32>>) -> u32 {
 pub fn day_3() -> (String, String) {
     let f = read_to_string("input/day3.txt").unwrap();
 
-    let lines = || f.split("\n").take_while(|l| l.len() > 0).into_iter();
+    let lines = || f.lines().into_iter();
 
     let mut score_a = 0;
     let mut score_b = 0;

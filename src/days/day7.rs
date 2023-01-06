@@ -80,7 +80,7 @@ pub fn day_7() -> (String, String) {
     let mut fs = FileSystem { nodes: vec![] };
     let mut nodes = vec![];
 
-    for l in f.split("\n") {
+    for l in f.lines() {
         if l.starts_with("$ cd") {
             let (_, dn) = l.split_at(5);
 

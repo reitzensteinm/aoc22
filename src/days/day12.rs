@@ -103,7 +103,7 @@ pub fn day_12() -> (String, String) {
     let mut end = None;
 
     let mut lines = vec![];
-    for (cy, l) in f.lines().filter(|l| l.len() > 0).enumerate() {
+    for (cy, l) in f.lines().enumerate() {
         let mut line = vec![];
         for (cx, c) in l.chars().enumerate() {
             let height = if c == 'S' {

@@ -54,7 +54,7 @@ pub fn day_9() -> (String, String) {
     long_sim.visited.insert([0, 0]);
     sim.visited.insert([0, 0]);
 
-    for l in f.split("\n").filter(|l| l.len() > 0) {
+    for l in f.lines() {
         let (dir_str, mag_str) = l.split_once(" ").unwrap();
 
         // I hope this is code motioned out...

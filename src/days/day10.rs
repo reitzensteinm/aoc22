@@ -45,7 +45,7 @@ pub fn day_10() -> (String, String) {
         instructions: vec![],
     };
 
-    for l in f.split("\n").filter(|l| l.len() > 0) {
+    for l in f.lines() {
         m.instructions.push(0);
 
         if l != "noop" {

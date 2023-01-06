@@ -39,7 +39,7 @@ pub fn day_8() -> (String, String) {
 
     let mut grid = Grid { lines: vec![] };
 
-    for l in f.split("\n").filter(|l| l.len() > 0) {
+    for l in f.lines() {
         let mut squares = vec![];
 
         for c in l.chars() {

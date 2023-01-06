@@ -59,7 +59,7 @@ pub fn day_2() -> (String, String) {
     let mut total_a = 0;
     let mut total_b = 0;
 
-    for l in f.split("\n") {
+    for l in f.lines() {
         if l.len() > 0 {
             let theirs = parse_rps(l.chars().nth(0).unwrap());
             let ours = parse_rps(l.chars().nth(2).unwrap());

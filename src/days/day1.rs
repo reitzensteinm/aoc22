@@ -6,7 +6,7 @@ pub fn day_1() -> (String, String) {
     let mut cals = vec![];
     let mut run = vec![];
 
-    for l in f.split("\n") {
+    for l in f.lines() {
         if let Ok(i) = str::parse::<u32>(l) {
             run.push(i);
         } else {

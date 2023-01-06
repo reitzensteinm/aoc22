@@ -31,7 +31,7 @@ pub fn day_4() -> (String, String) {
     let mut fully_contains = 0;
     let mut overlaps = 0;
 
-    for l in f.split("\n").take_while(|l| l.len() > 0) {
+    for l in f.lines() {
         let c = re.captures(l).unwrap();
 
         let a = Range::new(str::parse(&c[1]).unwrap(), str::parse(&c[2]).unwrap());

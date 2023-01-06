@@ -40,7 +40,7 @@ impl Floor {
 pub fn day_5() -> (String, String) {
     let f = read_to_string("input/day5.txt").unwrap();
 
-    let mut lines = f.split("\n");
+    let mut lines = f.lines();
 
     let stack_lines: Vec<Vec<char>> = lines
         .by_ref()

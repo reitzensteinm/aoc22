@@ -100,7 +100,7 @@ pub fn day_14() -> (String, String) {
         sand_count: 0,
     };
 
-    for l in f.lines().filter(|l| l.len() > 0) {
+    for l in f.lines() {
         let locations = l.split(" -> ");
 
         let mut last = None;

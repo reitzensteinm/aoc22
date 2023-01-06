@@ -203,7 +203,7 @@ impl Game {
 
 pub fn day_17() -> (String, String) {
     let f = read_to_string("input/day17.txt").unwrap();
-    let line = f.split("\n").nth(0).unwrap();
+    let line = f.lines().nth(0).unwrap();
 
     let mut dirs = vec![];
     for n in line.chars() {

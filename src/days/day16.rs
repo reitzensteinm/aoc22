@@ -432,7 +432,7 @@ pub fn day_16() -> (String, String) {
     };
 
     let mut valves = vec![];
-    for l in f.lines().filter(|l| l.len() > 0) {
+    for l in f.lines() {
         let c = re.captures(l).unwrap();
 
         let valve = get_mapping(&c[1]);

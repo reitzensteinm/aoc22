@@ -82,7 +82,7 @@ impl MonkeyTroop {
 pub fn day_11() -> (String, String) {
     let f = read_to_string("input/day11.txt").unwrap();
 
-    let lines: Vec<&str> = f.split("\n").filter(|l| l.len() > 0).collect();
+    let lines: Vec<&str> = f.lines().filter(|l|l.len()>0).collect();
 
     let mut monkeys = vec![];
     let mut co_prime = 1;
