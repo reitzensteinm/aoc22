@@ -27,6 +27,7 @@ use crate::days::day9::day_9;
 use std::time;
 
 mod days;
+mod utils;
 
 fn main() {
     let iters = 10;
