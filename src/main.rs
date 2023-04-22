@@ -32,6 +32,9 @@ mod utils;
 fn main() {
     let iters = 10;
 
+    day_23();
+    panic!();
+
     for i in 0..iters {
         let start = time::Instant::now();
         let mut last = start;

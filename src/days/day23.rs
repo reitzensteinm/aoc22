@@ -1,4 +1,7 @@
 use std::fs::read_to_string;
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::Path;
 
 // With the exception of using an intermediate mask that represents surrounding dwarves,
 // this is a pretty straight forward implementation of the stated rules.
@@ -27,6 +30,7 @@ struct Board {
     round: usize,
     finished: bool,
     moved: usize,
+    shuffle_count: usize,
     squares: Vec<Square>,
     dwarves: Vec<Dwarf>,
 }
@@ -144,7 +148,7 @@ impl Board {
                     self.moved += 1;
                     self.squares[current_square] = Square::Empty;
                     self.squares[dest_square] = Square::Dwarf(d as u16);
-
+                    self.shuffle_count += 1;
                     for cx in -1..=1 {
                         for cy in -1..=1 {
                             if let Square::Dwarf(od) = self.squares[((dy as isize + cy) as usize)
@@ -164,6 +168,53 @@ impl Board {
 
         self.finished = !any_moved;
         self.round += 1;
+
+        let mut pixel_data = vec![];
+        for y in 0..self.height {
+            for _ in 0..8 {
+                for x in 0..self.width {
+                    for _ in 0..8 {
+                        if let Square::Dwarf(_) = self.squares[y * self.width + x] {
+                            pixel_data.append(&mut vec![255, 0, 0, 255]);
+                        } else {
+                            pixel_data.append(&mut vec![255, 255, 255, 255]);
+                        }
+                    }
+                }
+            }
+
+            println!();
+        }
+
+        let mut s = format!("{}", self.round).to_string();
+        while s.len() < 4 {
+            s = format!("0{}", s).to_string()
+        }
+
+        let file_name = format!("frame_{}.png", s).to_string();
+        let path = Path::new(&file_name);
+        let file = File::create(path).unwrap();
+        let ref mut w = BufWriter::new(file);
+
+        let mut encoder = png::Encoder::new(w, self.width as u32 * 8, self.height as u32 * 8); // Width is 2 pixels and height is 1.
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder.set_source_gamma(png::ScaledFloat::from_scaled(45455)); // 1.0 / 2.2, scaled by 100000
+        encoder.set_source_gamma(png::ScaledFloat::new(1.0 / 2.2)); // 1.0 / 2.2, unscaled, but rounded
+        let source_chromaticities = png::SourceChromaticities::new(
+            // Using unscaled instantiation here
+            (0.31270, 0.32900),
+            (0.64000, 0.33000),
+            (0.30000, 0.60000),
+            (0.15000, 0.06000),
+        );
+        encoder.set_source_chromaticities(source_chromaticities);
+        let mut writer = encoder.write_header().unwrap();
+
+        //let data = [255, 0, 0, 255, 0, 0, 0, 255]; // An array containing a RGBA sequence. First pixel is red and second pixel is black.
+        writer.write_image_data(&pixel_data).unwrap(); // Save
+
+        println!("{}", self.shuffle_count);
     }
 
     fn score(&self) -> usize {
@@ -231,6 +282,7 @@ pub fn day_23() -> (String, String) {
     let mut b = Board {
         width,
         height,
+        shuffle_count: 0,
         round: 0,
         moved: 0,
         finished: false,
