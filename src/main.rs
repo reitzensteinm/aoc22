@@ -24,6 +24,7 @@ use crate::days::day7::day_7;
 use crate::days::day8::day_8;
 use crate::days::day9::day_9;
 
+use crate::days::day23_bitfield::day_23;
 use std::time;
 
 mod days;
@@ -31,6 +32,9 @@ mod utils;
 
 fn main() {
     let iters = 10;
+
+    day_23();
+    todo!();
 
     for i in 0..iters {
         let start = time::Instant::now();
