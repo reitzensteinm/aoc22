@@ -7,13 +7,20 @@ use std::fs::read_to_string;
 // I'm a little sad this didn't go faster - 1000 rounds takes 42 milliseconds on a 3900X.
 // To speed it up, it either needs lower level SIMD magic, or it needs something like HashLife.
 
+#[derive(Copy, Clone, Debug)]
+enum Intent {
+    Empty,
+    One(u16),
+    Two(u16, u16),
+}
+
 struct Dwarf {
     dest: Option<(usize, usize)>,
     pos: (usize, usize),
     awake: bool,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum Square {
     Empty,
     Dwarf(u16),
@@ -28,11 +35,47 @@ struct Board {
     finished: bool,
     moved: usize,
     squares: Vec<Square>,
+    intent: Vec<Vec<Intent>>,
     dwarves: Vec<Dwarf>,
 }
 
 impl Board {
-    fn step(&mut self) {
+    fn clear_itent(&mut self, d: usize) {
+        let dwarf = &mut self.dwarves[d as usize];
+        let (x, y) = dwarf.pos;
+
+        const DIFF: [(isize, isize); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+        for r in 0..4 {
+            for (dx, dy) in DIFF {
+                let ind = (y as isize + dy) * self.width as isize + (x as isize + dx);
+                let i = &mut self.intent[r][ind as usize];
+
+                match i {
+                    Intent::Empty => {}
+                    Intent::One(a) => {
+                        if *a as usize == d {
+                            *i = Intent::Empty;
+                        }
+                    }
+                    Intent::Two(a, b) => {
+                        if *a as usize == d {
+                            *i = Intent::One(*b);
+                        } else if *b as usize == d {
+                            *i = Intent::One(*a);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn refresh_intent(&mut self, d: usize) {
+        self.clear_itent(d);
+
+        let dwarf = &mut self.dwarves[d as usize];
+        let (x, y) = dwarf.pos;
+
         const CHECKS: [((isize, isize), u8); 4] = [
             ((0, -1), 0b111),
             ((0, 1), 0b11100000),
@@ -40,130 +83,132 @@ impl Board {
             ((1, 0), 0b10010100),
         ];
 
-        for d in 0..self.dwarves.len() {
-            if !self.dwarves[d].awake {
-                continue;
-            }
+        let mut dwarf_map: u8 = 0;
 
-            let (x, y) = self.dwarves[d].pos;
+        // Maps surrounding squares into a mask, which can easily (?) be used to figure out what
+        // to do next. Manually inlining yields the desired speedup, but I'm curious what
+        // matches!() is going to compile down to. Not breaking out Godbolt for this...
 
-            let mut dwarf_map: u8 = 0;
+        if matches!(
+            self.squares[((y - 1) * self.width + x - 1)],
+            Square::Dwarf(_)
+        ) {
+            dwarf_map |= 1;
+        }
 
-            // Maps surrounding squares into a mask, which can easily (?) be used to figure out what
-            // to do next. Manually inlining yields the desired speedup, but I'm curious what
-            // matches!() is going to compile down to. Not breaking out Godbolt for this...
+        if matches!(self.squares[((y - 1) * self.width + x)], Square::Dwarf(_)) {
+            dwarf_map |= 1 << 1;
+        }
 
-            if matches!(
-                self.squares[((y - 1) * self.width + x - 1)],
-                Square::Dwarf(_)
-            ) {
-                dwarf_map |= 1;
-            }
+        if matches!(
+            self.squares[((y - 1) * self.width + x + 1)],
+            Square::Dwarf(_)
+        ) {
+            dwarf_map |= 1 << 2;
+        }
 
-            if matches!(self.squares[((y - 1) * self.width + x)], Square::Dwarf(_)) {
-                dwarf_map |= 1 << 1;
-            }
+        if matches!(self.squares[((y) * self.width + x - 1)], Square::Dwarf(_)) {
+            dwarf_map |= 1 << 3;
+        }
 
-            if matches!(
-                self.squares[((y - 1) * self.width + x + 1)],
-                Square::Dwarf(_)
-            ) {
-                dwarf_map |= 1 << 2;
-            }
+        if matches!(self.squares[((y) * self.width + x + 1)], Square::Dwarf(_)) {
+            dwarf_map |= 1 << 4;
+        }
 
-            if matches!(self.squares[((y) * self.width + x - 1)], Square::Dwarf(_)) {
-                dwarf_map |= 1 << 3;
-            }
+        if matches!(
+            self.squares[((y + 1) * self.width + x - 1)],
+            Square::Dwarf(_)
+        ) {
+            dwarf_map |= 1 << 5;
+        }
 
-            if matches!(self.squares[((y) * self.width + x + 1)], Square::Dwarf(_)) {
-                dwarf_map |= 1 << 4;
-            }
+        if matches!(self.squares[((y + 1) * self.width + x)], Square::Dwarf(_)) {
+            dwarf_map |= 1 << 6;
+        }
 
-            if matches!(
-                self.squares[((y + 1) * self.width + x - 1)],
-                Square::Dwarf(_)
-            ) {
-                dwarf_map |= 1 << 5;
-            }
+        if matches!(
+            self.squares[((y + 1) * self.width + x + 1)],
+            Square::Dwarf(_)
+        ) {
+            dwarf_map |= 1 << 7;
+        }
 
-            if matches!(self.squares[((y + 1) * self.width + x)], Square::Dwarf(_)) {
-                dwarf_map |= 1 << 6;
-            }
+        if dwarf_map == 0 {
+            return;
+        }
 
-            if matches!(
-                self.squares[((y + 1) * self.width + x + 1)],
-                Square::Dwarf(_)
-            ) {
-                dwarf_map |= 1 << 7;
-            }
-
-            if dwarf_map == 0b00000000 {
-                self.dwarves[d].awake = false;
-                continue;
-            }
-
+        for stage in 0..4 {
             for cn in 0..4 {
-                let (dir, mask) = CHECKS[(cn + self.round) % 4];
+                let (dir, mask) = CHECKS[(cn + stage) % 4];
 
                 if dwarf_map & mask == 0 {
                     let tx = (x as isize + dir.0) as usize;
                     let ty = (y as isize + dir.1) as usize;
-                    let from = self.squares[y * self.width + x];
-                    let to = self.squares[ty * self.width + tx];
 
-                    if to == Square::Marked {
-                        self.squares[ty * self.width + tx] = Square::OverMarked;
-                    } else if to == Square::Empty {
-                        self.squares[ty * self.width + tx] = Square::Marked;
-                    }
+                    let iq = &mut self.intent[stage][ty * self.width + tx];
 
-                    if let Square::Dwarf(d) = from {
-                        self.dwarves[d as usize].dest = Some((tx, ty));
-                    } else {
-                        panic!();
+                    match *iq {
+                        Intent::Empty => {
+                            *iq = Intent::One(d as u16);
+                        }
+                        Intent::One(a) => {
+                            if a != d as u16 {
+                                *iq = Intent::Two(a, d as u16);
+                            }
+                        }
+                        Intent::Two(a, b) => {
+                            if a != d as u16 && b != d as u16 {
+                                panic!();
+                            }
+                        }
                     }
 
                     break;
                 }
             }
         }
+    }
+
+    fn step(&mut self) {
+        //self.intent = vec![vec![Intent::Empty; self.squares.len()]; 4];
+
+        for d in 0..self.dwarves.len() {
+            self.refresh_intent(d);
+        }
 
         let mut any_moved = false;
 
-        for d in 0..self.dwarves.len() {
-            if let Some((dx, dy)) = self.dwarves[d].dest {
-                let (px, py) = self.dwarves[d].pos;
-
-                let dest_square = dy * self.width + dx;
+        let r = self.round % 4;
+        for c in 0..self.intent[r].len() {
+            if let Intent::One(d) = self.intent[r][c] {
+                self.clear_itent(d as usize);
+                let (px, py) = self.dwarves[d as usize].pos;
                 let current_square = py * self.width + px;
+                let dest_square = ((c % self.width), (c / self.width));
 
-                if self.squares[dest_square] == Square::OverMarked {
-                    self.squares[dest_square] = Square::Empty;
-                } else if self.squares[dest_square] == Square::Marked {
-                    any_moved = true;
-                    self.moved += 1;
-                    self.squares[current_square] = Square::Empty;
-                    self.squares[dest_square] = Square::Dwarf(d as u16);
-
-                    for cx in -1..=1 {
-                        for cy in -1..=1 {
-                            if let Square::Dwarf(od) = self.squares[((dy as isize + cy) as usize)
-                                * self.width
-                                + (dx as isize + cx) as usize]
-                            {
-                                self.dwarves[od as usize].awake = true;
-                            }
-                        }
-                    }
-                    self.dwarves[d].pos = (dx, dy);
-                }
-
-                self.dwarves[d].dest = None;
+                any_moved = true;
+                self.moved += 1;
+                self.squares[current_square] = Square::Empty;
+                self.squares[c] = Square::Dwarf(d as u16);
+                self.dwarves[d as usize].pos = dest_square;
             }
         }
 
         self.finished = !any_moved;
         self.round += 1;
+
+        // println!();
+        // for y in 0..self.height {
+        //     println!();
+        //     for x in 0..self.width {
+        //         let chr = if let Square::Dwarf(_) = self.squares[y * self.width + x] {
+        //             "x"
+        //         } else {
+        //             "."
+        //         };
+        //         print!("{}", chr);
+        //     }
+        // }
     }
 
     fn score(&self) -> usize {
@@ -196,20 +241,22 @@ impl Board {
     }
 }
 
-const PADDING: usize = 60;
+const PADDING: usize = 60; //1 //60;
 
 pub fn day_23() -> (String, String) {
     let f = read_to_string("input/day23.txt").unwrap();
 
+    let lines: Vec<Vec<char>> = f.lines().map(|v| v.chars().collect()).collect();
+
     let mut in_squares = vec![];
     let mut dwarves = vec![];
-    let width = PADDING * 2 + 74;
-    let height = PADDING * 2 + 74;
+    let width = lines[0].len() + PADDING * 2;
+    let height = lines.len() + PADDING * 2;
 
-    for (y, l) in f.lines().enumerate() {
+    for (y, l) in lines.iter().enumerate() {
         in_squares.append(&mut vec![Square::Empty; PADDING]);
-        for (x, c) in l.chars().enumerate() {
-            in_squares.push(if c == '.' {
+        for (x, c) in l.iter().enumerate() {
+            in_squares.push(if *c == '.' {
                 Square::Empty
             } else {
                 let num = dwarves.len() as u16;
@@ -231,6 +278,7 @@ pub fn day_23() -> (String, String) {
     let mut b = Board {
         width,
         height,
+        intent: vec![vec![Intent::Empty; squares.len()]; 4],
         round: 0,
         moved: 0,
         finished: false,
