@@ -108,7 +108,6 @@ impl Board {
                 if dwarf_map & mask == 0 {
                     let tx = (x as isize + dir.0) as usize;
                     let ty = (y as isize + dir.1) as usize;
-                    let from = self.squares[y * self.width + x];
                     let to = self.squares[ty * self.width + tx];
 
                     if to == Square::Marked {
@@ -117,11 +116,7 @@ impl Board {
                         self.squares[ty * self.width + tx] = Square::Marked;
                     }
 
-                    if let Square::Dwarf(d) = from {
-                        self.dwarves[d as usize].dest = Some((tx, ty));
-                    } else {
-                        panic!();
-                    }
+                    self.dwarves[d as usize].dest = Some((tx, ty));
 
                     break;
                 }
