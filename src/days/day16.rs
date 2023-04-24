@@ -38,7 +38,7 @@ impl System {
                     }
                 }
             }
-            pf(&self, &mut times, self.valves[i].num, 0);
+            pf(self, &mut times, self.valves[i].num, 0);
 
             self.valves[i].times = times.iter().map(|n| n.unwrap()).collect();
         }
@@ -79,7 +79,7 @@ impl Entity {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 struct SearchState {
     player: Entity,
     elephant: Entity,
@@ -103,6 +103,14 @@ impl PartialOrd for SearchState {
                 .cmp(&other.step)
                 .then(self.reward.cmp(&other.reward)),
         )
+    }
+}
+
+impl Ord for SearchState {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.step
+            .cmp(&other.step)
+            .then(self.reward.cmp(&other.reward))
     }
 }
 
@@ -139,7 +147,7 @@ impl SearchState {
         let build_choices = |e: &Entity, other: &Entity| {
             // If pathfinding is underway, continue
             if e.dest.is_some() {
-                return vec![Choice::Continue];
+                vec![Choice::Continue]
             } else {
                 let mut out = vec![];
                 for v in &search.system.flow_priority {
@@ -162,10 +170,10 @@ impl SearchState {
                     }
                 }
                 // When an entity has nothing to do, swap to idle mode
-                if out.len() == 0 {
+                if out.is_empty() {
                     out.push(Choice::Idle);
                 }
-                return out;
+                out
             }
         };
 
@@ -198,7 +206,7 @@ impl SearchState {
                     }
                 }
 
-                let mut base = self.clone();
+                let mut base = *self;
 
                 base.volume += base.flow;
                 base.step += 1;
@@ -254,7 +262,7 @@ impl SearchState {
     fn best_possible_outcome(&self, search: &Search) -> usize {
         let steps = search.steps - self.step as usize;
 
-        let mut clone = self.clone();
+        let mut clone = *self;
         let mut out = self.volume as usize;
 
         let plan = |entity: &Entity| {
@@ -437,7 +445,7 @@ pub fn day_16() -> (String, String) {
 
         let valve = get_mapping(&c[1]);
         let flow = str::parse::<usize>(&c[2]).unwrap();
-        let to = (&c[3])
+        let to = c[3]
             .split(", ")
             .map(&mut get_mapping)
             .collect::<Vec<usize>>();

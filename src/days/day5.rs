@@ -44,7 +44,7 @@ pub fn day_5() -> (String, String) {
 
     let stack_lines: Vec<Vec<char>> = lines
         .by_ref()
-        .take_while(|l| l.len() > 0)
+        .take_while(|l| !l.is_empty())
         .map(|l| l.chars().collect())
         .collect();
 
@@ -70,7 +70,7 @@ pub fn day_5() -> (String, String) {
     }
 
     let re = Regex::new(r"^move (\d+) from (\d+) to (\d+)$").unwrap();
-    for instr in lines.take_while(|l| l.len() > 0) {
+    for instr in lines.take_while(|l| !l.is_empty()) {
         let c = re.captures(instr).unwrap();
         let from = str::parse::<usize>(&c[2]).unwrap() - 1;
         let to = str::parse::<usize>(&c[3]).unwrap() - 1;
@@ -80,8 +80,5 @@ pub fn day_5() -> (String, String) {
         floor_multi.transfer(from, to, amount);
     }
 
-    (
-        format!("{}", floor_single.describe()),
-        format!("{}", floor_multi.describe()),
-    )
+    (floor_single.describe(), floor_multi.describe())
 }

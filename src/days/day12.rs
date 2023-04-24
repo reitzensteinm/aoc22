@@ -58,7 +58,7 @@ impl Grid {
 
         let mut next = vec![];
         for (px, py) in ps.positions {
-            let current = self.get((px, py)).unwrap().clone();
+            let current = *self.get((px, py)).unwrap();
             let end = self.end;
 
             // The "reverse" here makes me sad. A boxed callback in an inner loops is too slow
@@ -80,10 +80,8 @@ impl Grid {
                             if sq.height == 0 {
                                 return PathfindStage::Complete(sq.cost);
                             }
-                        } else {
-                            if (px + dx, py + dy) == end {
-                                return PathfindStage::Complete(sq.cost);
-                            }
+                        } else if (px + dx, py + dy) == end {
+                            return PathfindStage::Complete(sq.cost);
                         }
 
                         next.push((px + dx, py + dy));
@@ -113,7 +111,7 @@ pub fn day_12() -> (String, String) {
                 end = Some((cx as isize, cy as isize));
                 25
             } else {
-                (c as u8) - ('a' as u8)
+                (c as u8) - b'a'
             };
 
             let sq = Square {

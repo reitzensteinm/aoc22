@@ -116,7 +116,7 @@ impl Board {
                         self.squares[ty * self.width + tx] = Square::Marked;
                     }
 
-                    self.dwarves[d as usize].dest = Some((tx, ty));
+                    self.dwarves[d].dest = Some((tx, ty));
 
                     break;
                 }

@@ -77,7 +77,7 @@ fn flood_fill_external(grid: &mut Grid, p: (isize, isize, isize)) {
             }
         }
 
-        if next.len() == 0 {
+        if next.is_empty() {
             return;
         }
         points = next;

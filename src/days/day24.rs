@@ -57,9 +57,9 @@ pub fn day_24() -> (String, String) {
             let acc = Or::new(&acc, &sd);
 
             let mut moved_blizzards = vec![];
-            for x in 0..4 {
+            for (x, blizzard) in blizzards.iter().enumerate() {
                 let dir = vec![(0, -time), (0, time), (time, 0), (-time, 0)][x];
-                let w = Window::new(&blizzards[x], 1, 1, width - 2, height - 2);
+                let w = Window::new(blizzard, 1, 1, width - 2, height - 2);
                 let s = ShiftedWrap::new(&w, dir.0, dir.1);
                 let nw = Window::new(&s, 0, 0, width, height);
                 let out = Shifted::new(&nw, 1, 1);

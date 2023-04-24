@@ -55,7 +55,7 @@ pub fn day_9() -> (String, String) {
     sim.visited.insert([0, 0]);
 
     for l in f.lines() {
-        let (dir_str, mag_str) = l.split_once(" ").unwrap();
+        let (dir_str, mag_str) = l.split_once(' ').unwrap();
 
         // I hope this is code motioned out...
         let dir = if dir_str == "U" {

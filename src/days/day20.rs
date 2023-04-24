@@ -66,7 +66,7 @@ impl Code {
         for (i, v) in arr.iter().enumerate() {
             if *v == 0 {
                 let g = |ind: usize| arr[ind % arr.len()] as isize * self.multiplier;
-                return (g(i + 1000) + g(i + 2000) + g(i + 3000)) as isize;
+                return g(i + 1000) + g(i + 2000) + g(i + 3000);
             }
         }
         panic!()

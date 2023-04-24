@@ -280,7 +280,7 @@ impl BitGrid {
     }
 
     pub fn get(&self, x: usize, y: usize) -> bool {
-        (self.backing[y][x / WIDTH_U] >> x % WIDTH_U & 1) == 1
+        (self.backing[y][x / WIDTH_U] >> (x % WIDTH_U) & 1) == 1
     }
 
     pub fn set(&mut self, x: usize, y: usize, v: bool) {

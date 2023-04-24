@@ -249,7 +249,7 @@ impl Game {
             }
         }
 
-        (self.state.y + 1) * 1000 + (self.state.x + 1) * 4 + self.state.rotation as isize
+        (self.state.y + 1) * 1000 + (self.state.x + 1) * 4 + self.state.rotation
     }
 }
 

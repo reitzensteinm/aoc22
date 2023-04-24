@@ -7,7 +7,7 @@ struct Control {
     current: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct Field {
     trimmed: usize,
     rows: Vec<u64>,
@@ -51,15 +51,6 @@ impl Field {
     }
 }
 
-impl Default for Field {
-    fn default() -> Self {
-        Field {
-            rows: vec![],
-            trimmed: 0,
-        }
-    }
-}
-
 impl Piece {
     fn default_pieces() -> Vec<Piece> {
         vec![
@@ -91,10 +82,8 @@ impl Piece {
             if yw < 0 {
                 return true;
             }
-            if yw < field.rows.len() as isize {
-                if (field.rows[yw as usize] & (l >> x)) != 0 {
-                    return true;
-                }
+            if yw < field.rows.len() as isize && (field.rows[yw as usize] & (l >> x)) != 0 {
+                return true;
             }
         }
         false
@@ -203,7 +192,7 @@ impl Game {
 
 pub fn day_17() -> (String, String) {
     let f = read_to_string("input/day17.txt").unwrap();
-    let line = f.lines().nth(0).unwrap();
+    let line = f.lines().next().unwrap();
 
     let mut dirs = vec![];
     for n in line.chars() {

@@ -35,9 +35,12 @@ fn main() {
     for i in 0..iters {
         let start = time::Instant::now();
         let mut last = start;
+        let mut num = 0;
+
         let mut run_day = |d: &dyn Fn() -> (String, String)| {
             if i == iters - 1 {
-                println!("{:?}", d());
+                num += 1;
+                println!("Day {} {:?}", num, d());
                 let now = time::Instant::now();
                 println!(
                     "{} ({})",

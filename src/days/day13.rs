@@ -9,15 +9,7 @@ enum Packet {
 
 fn packet_compare(a: &Packet, b: &Packet) -> Ordering {
     match (a, b) {
-        (Packet::Number(na), Packet::Number(nb)) => {
-            if na == nb {
-                Ordering::Equal
-            } else if na < nb {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        }
+        (Packet::Number(na), Packet::Number(nb)) => na.cmp(nb),
         (Packet::List(la), Packet::List(lb)) => {
             for n in 0.. {
                 match (n >= la.len(), n >= lb.len()) {
@@ -63,10 +55,6 @@ impl Stream {
     }
 }
 
-fn is_number(c: char) -> bool {
-    c >= '0' && c <= '9'
-}
-
 fn read_array(s: &mut Stream) -> Packet {
     s.read();
     let mut out = vec![];
@@ -90,7 +78,7 @@ fn read(s: &mut Stream) -> Packet {
     } else {
         let mut nums = "".to_string();
 
-        while !s.eof() && is_number(s.peek()) {
+        while !s.eof() && s.peek().is_ascii_digit() {
             nums.push(s.read());
         }
 
@@ -138,9 +126,9 @@ pub fn day_13() -> (String, String) {
 
     let mut divider_mult = 1;
 
-    for n in 0..packets.len() {
-        if packet_compare(&packets[n], &divider_a) == Ordering::Equal
-            || packet_compare(&packets[n], &divider_b) == Ordering::Equal
+    for (n, packet) in packets.iter().enumerate() {
+        if packet_compare(packet, &divider_a) == Ordering::Equal
+            || packet_compare(packet, &divider_b) == Ordering::Equal
         {
             divider_mult *= n + 1;
         }

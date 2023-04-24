@@ -71,7 +71,7 @@ impl Machine {
         };
 
         let res = match o {
-            Op::KnownConst(v) => Value::Known(v.clone()),
+            Op::KnownConst(v) => Value::Known(*v),
             Op::UnknownConst => Value::Unknown,
             Op::Add(a, b) => value_op(a, b, |a, b| a + b),
             Op::Subtract(a, b) => value_op(a, b, |a, b| a - b),

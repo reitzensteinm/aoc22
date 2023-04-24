@@ -54,10 +54,8 @@ impl Grid {
             let p = (px + x, py + 1);
             let g = self.get(p);
 
-            if *g == Square::Air {
-                if self.spawn_sand(p) {
-                    return true;
-                }
+            if *g == Square::Air && self.spawn_sand(p) {
+                return true;
             }
         }
 
@@ -105,7 +103,7 @@ pub fn day_14() -> (String, String) {
 
         let mut last = None;
         for loc in locations {
-            let (xs, ys) = loc.split_once(",").unwrap();
+            let (xs, ys) = loc.split_once(',').unwrap();
             let x = str::parse::<isize>(xs).unwrap();
             let y = str::parse::<isize>(ys).unwrap();
 

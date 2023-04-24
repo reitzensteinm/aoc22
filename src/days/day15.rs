@@ -125,7 +125,7 @@ fn check_square(sensors: &[Sensor], square: Square) -> Option<Pos> {
         }
     }
 
-    return None;
+    None
 }
 
 // Each sensor forms an exclusion range for a given Y value
@@ -174,7 +174,7 @@ fn part_2(sensors: &[Sensor]) -> isize {
 
             for chx in x - 1..=x + 1 {
                 for chy in y - 1..=y + 1 {
-                    if chx >= 0 && chx <= 4_000_000 && chy >= 0 && chy <= 4_000_000 {
+                    if (0..=4_000_000).contains(&chx) && (0..=4_000_000).contains(&chy) {
                         let mut blocked = false;
                         for s in sensors {
                             if s.excludes_pos((chx, chy)) {

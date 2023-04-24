@@ -47,5 +47,5 @@ pub fn day_25() -> (String, String) {
         sum += snafu_to_num(l);
     }
 
-    (format!("{}", num_to_snafu(sum)), "yay".to_string())
+    (num_to_snafu(sum), "yay".to_string())
 }

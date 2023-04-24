@@ -34,11 +34,11 @@ impl Monkey {
                 };
 
                 if divisor != 1 {
-                    new_level = new_level / divisor
+                    new_level /= divisor
                 }
 
                 if new_level > 1_000_000_000 {
-                    new_level = new_level % co_prime;
+                    new_level %= co_prime;
                 }
 
                 let target = if new_level % self.route[0] == 0 {
@@ -82,7 +82,7 @@ impl MonkeyTroop {
 pub fn day_11() -> (String, String) {
     let f = read_to_string("input/day11.txt").unwrap();
 
-    let lines: Vec<&str> = f.lines().filter(|l|l.len()>0).collect();
+    let lines: Vec<&str> = f.lines().filter(|l| !l.is_empty()).collect();
 
     let mut monkeys = vec![];
     let mut co_prime = 1;

@@ -49,7 +49,7 @@ pub fn day_10() -> (String, String) {
         m.instructions.push(0);
 
         if l != "noop" {
-            let (_, v) = l.split_once(" ").unwrap();
+            let (_, v) = l.split_once(' ').unwrap();
             let off = str::parse::<isize>(v).unwrap();
             m.instructions.push(off);
         };

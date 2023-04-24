@@ -96,10 +96,9 @@ pub fn day_7() -> (String, String) {
             if let Some(n) = node {
                 nodes.push(n);
             }
-        } else if l.starts_with("$") {
-        } else if l.starts_with("dir") {
-        } else if l != "" {
-            let (size, name) = l.split_once(" ").unwrap();
+        } else if l.starts_with('$') || l.starts_with("dir") {
+        } else if !l.is_empty() {
+            let (size, name) = l.split_once(' ').unwrap();
             let sizei = str::parse::<u32>(size).unwrap();
             fs.add_file(name, sizei, Some(*nodes.last().unwrap()));
         }
