@@ -53,47 +53,35 @@ impl Board {
             // to do next. Manually inlining yields the desired speedup, but I'm curious what
             // matches!() is going to compile down to. Not breaking out Godbolt for this...
 
-            if matches!(
-                self.squares[((y - 1) * self.width + x - 1)],
-                Square::Dwarf(_)
-            ) {
+            if matches!(self.squares[(y - 1) * self.width + x - 1], Square::Dwarf(_)) {
                 dwarf_map |= 1;
             }
 
-            if matches!(self.squares[((y - 1) * self.width + x)], Square::Dwarf(_)) {
+            if matches!(self.squares[(y - 1) * self.width + x], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 1;
             }
 
-            if matches!(
-                self.squares[((y - 1) * self.width + x + 1)],
-                Square::Dwarf(_)
-            ) {
+            if matches!(self.squares[(y - 1) * self.width + x + 1], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 2;
             }
 
-            if matches!(self.squares[((y) * self.width + x - 1)], Square::Dwarf(_)) {
+            if matches!(self.squares[(y) * self.width + x - 1], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 3;
             }
 
-            if matches!(self.squares[((y) * self.width + x + 1)], Square::Dwarf(_)) {
+            if matches!(self.squares[(y) * self.width + x + 1], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 4;
             }
 
-            if matches!(
-                self.squares[((y + 1) * self.width + x - 1)],
-                Square::Dwarf(_)
-            ) {
+            if matches!(self.squares[(y + 1) * self.width + x - 1], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 5;
             }
 
-            if matches!(self.squares[((y + 1) * self.width + x)], Square::Dwarf(_)) {
+            if matches!(self.squares[(y + 1) * self.width + x], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 6;
             }
 
-            if matches!(
-                self.squares[((y + 1) * self.width + x + 1)],
-                Square::Dwarf(_)
-            ) {
+            if matches!(self.squares[(y + 1) * self.width + x + 1], Square::Dwarf(_)) {
                 dwarf_map |= 1 << 7;
             }
 
