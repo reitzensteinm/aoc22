@@ -28,8 +28,12 @@ use std::time;
 
 mod days;
 mod utils;
+pub mod viz;
 
 fn main() {
+    day_14();
+    panic!();
+
     let iters = 10;
 
     for i in 0..iters {

@@ -1,3 +1,5 @@
+use crate::viz::plot::Plot;
+use std::cell::Cell;
 use std::fs::read_to_string;
 
 type Pos = (isize, isize);
@@ -127,6 +129,20 @@ pub fn day_14() -> (String, String) {
 
     grid_floor.spawn_sand((500, 0));
     grid.spawn_sand((500, 0));
+
+    let mut im = Plot::new(MAP_WIDTH.into(), MAP_HEIGHT.into());
+
+    for x in 0..MAP_WIDTH {
+        for y in 0..MAP_HEIGHT {
+            let col = match grid_floor.cells[y][x] {
+                Square::Rock => (255, 0, 255),
+                Square::Air => (255, 255, 255),
+                Square::Sand => (255, 255, 0),
+            };
+            im.draw(x, y, col);
+        }
+    }
+    im.save("sand.png", 1);
 
     (
         format!("{}", grid.sand_count),
